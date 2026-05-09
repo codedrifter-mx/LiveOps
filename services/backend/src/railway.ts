@@ -16,6 +16,55 @@ const GET_DEPLOYS = gql`query getDeployments($serviceId: String!, $environmentId
 const GET_STATUS = gql`query deployment($id: String!) { deployment(id: $id) { id status url } }`;
 const UPSERT_VAR = gql`mutation variableUpsert($input: VariableUpsertInput!) { variableUpsert(input: $input) }`;
 
+export interface ServiceInfo {
+  id: string;
+  serviceId: string;
+  serviceName: string;
+  numReplicas: number | null;
+  region: string | null;
+  source: string | null;
+  builder: string | null;
+  status: string | null;
+  deployUrl: string | null;
+  commitMessage: string | null;
+  commitAuthor: string | null;
+  instanceStatus: string | null;
+  domains: string[];
+  isSleeping: boolean;
+}
+
+const GET_SERVICES = gql`
+  query getEnvironmentServices($environmentId: String!) {
+    environment(id: $environmentId) {
+      serviceInstances {
+        edges {
+          node {
+            id
+            serviceId
+            serviceName
+            numReplicas
+            region
+            source
+            builder
+            startCommand
+            sleepApplication
+            cronSchedule
+            latestDeployment {
+              id
+              status
+              url
+              meta
+            }
+            domains {
+              domain
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
 export async function getLatestDeploymentId(): Promise<string | null> {
   if (!API_TOKEN) return null;
   try {
@@ -58,4 +107,36 @@ export async function getKeycloakStatus(): Promise<{ status: string; url?: strin
   if (!id) return { status: 'no_deployment' };
   const r: any = await client.request(GET_STATUS, { id });
   return { status: r?.deployment?.status || 'unknown', url: r?.deployment?.url };
+}
+
+export async function getEnvironmentServices(): Promise<ServiceInfo[]> {
+  if (!API_TOKEN || !KC_ENV_ID) return [];
+  try {
+    const r: any = await client.request(GET_SERVICES, { environmentId: KC_ENV_ID });
+    const edges = r?.environment?.serviceInstances?.edges || [];
+    return edges.map((e: any) => {
+      const node = e.node;
+      const dep = node.latestDeployment || {};
+      const meta = dep.meta || {};
+      return {
+        id: node.id,
+        serviceId: node.serviceId,
+        serviceName: node.serviceName || 'unknown',
+        numReplicas: node.numReplicas ?? null,
+        region: node.region || null,
+        source: node.source || null,
+        builder: node.builder || null,
+        status: dep.status || null,
+        deployUrl: dep.url || null,
+        commitMessage: meta.commitMessage || null,
+        commitAuthor: meta.commitAuthor || null,
+        instanceStatus: null,
+        domains: (node.domains || []).map((d: any) => d.domain),
+        isSleeping: !!node.sleepApplication,
+      };
+    });
+  } catch (e: any) {
+    console.error('[railway] getEnvironmentServices failed:', e?.message || e);
+    return [];
+  }
 }
