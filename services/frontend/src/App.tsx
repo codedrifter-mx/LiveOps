@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { CopilotKit } from '@copilotkit/react-core';
 import { useSSE, IncidentEvent } from './hooks/useSSE';
 import { COPILOTKIT_CONFIG } from './lib/copilotkit';
-import { useServices } from './hooks/useServices';
 import { Sidebar } from './components/Sidebar';
 import { NOCHeader } from './components/NOCHeader';
 import { EmptyState } from './components/EmptyState';
@@ -12,8 +11,6 @@ import { ActionButton } from './components/ActionButton';
 import { ApprovalCard } from './components/ApprovalCard';
 import { FeedItem } from './components/FeedItem';
 import { FooterStats } from './components/FooterStats';
-
-import { ServicesList } from './components/ServicesList';
 import './App.css';
 
 const BACKEND_URL = (window as any).__BACKEND_URL__ || '';
@@ -25,7 +22,7 @@ function App() {
   const [currentIncident, setCurrentIncident] = useState<IncidentEvent | null>(null);
   const [pendingAction, setPendingAction] = useState('');
   const [result, setResult] = useState<string | null>(null);
-  const [refreshTick, setRefreshTick] = useState(0);
+
   const [acknowledged, setAcknowledged] = useState(false);
 
   useEffect(() => {
@@ -33,7 +30,6 @@ function App() {
       setIncidents(prev => [lastEvent, ...prev].slice(0, 20));
       setIsDown(lastEvent.type === 'incident');
       setCurrentIncident(lastEvent);
-      setRefreshTick(t => t + 1);
       setAcknowledged(false);
     }
   }, [lastEvent]);
@@ -47,8 +43,6 @@ function App() {
       }
     }).catch(() => {});
   }, []);
-
-  const { services, loading: svcLoading, error: svcError, refetch: refetchServices } = useServices(refreshTick);
 
   const handleApprove = async () => {
     const ep = pendingAction === 'redeploy-keycloak' ? 'redeploy-keycloak' : pendingAction === 'recover-keycloak' ? 'recover-memory' : pendingAction === 'get-keycloak-status' ? 'railway-status' : pendingAction;
@@ -101,8 +95,6 @@ function App() {
                   />
 
                   {result && <div className="result-box">{result}</div>}
-
-                  <ServicesList services={services} loading={svcLoading} error={svcError} onRetry={refetchServices} />
                 </div>
 
                 <div className="" style={{display:'flex',flexDirection:'column',gap:24}}>
