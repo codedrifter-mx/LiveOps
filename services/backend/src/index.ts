@@ -77,8 +77,17 @@ const runtime = new CopilotRuntime({
     },
   ],
 });
-if (process.env.GOOGLE_API_KEY) {
-  app.use('/api/copilotkit', copilotRuntimeNodeExpressEndpoint({ runtime, serviceAdapter: new GoogleGenerativeAIAdapter({ model: 'gemini-2.0-flash', apiKey: process.env.GOOGLE_API_KEY }), endpoint: '/api/copilotkit' }));
+const apiKey = process.env.GOOGLE_API_KEY;
+if (apiKey) {
+  console.log('[liveops] GOOGLE_API_KEY detected, registering CopilotKit endpoint...');
+  try {
+    const adapter = new GoogleGenerativeAIAdapter({ model: 'gemini-2.0-flash', apiKey });
+    const handler = copilotRuntimeNodeExpressEndpoint({ runtime, serviceAdapter: adapter, endpoint: '/api/copilotkit' });
+    app.all('/api/copilotkit*', handler);
+    console.log('[liveops] CopilotKit endpoint registered at /api/copilotkit');
+  } catch (e: any) {
+    console.error('[liveops] Failed to register CopilotKit endpoint:', e.message);
+  }
 } else {
   console.warn('[liveops] GOOGLE_API_KEY not set — CopilotKit endpoint disabled');
 }
