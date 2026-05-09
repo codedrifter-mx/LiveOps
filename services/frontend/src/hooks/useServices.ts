@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export interface ServiceInfo {
   id: string;
@@ -23,11 +23,15 @@ export function useServices(trigger: number) {
   const [services, setServices] = useState<ServiceInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-  const refetch = () => {
+  const refetch = useCallback(() => {
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
     setLoading(true);
     setError(null);
-    fetch(SERVICES_URL)
+    fetch(SERVICES_URL, { signal: ac.signal })
       .then(r => r.json())
       .then(data => {
         if (data.error) { setError(data.error); setServices([]); }
@@ -35,12 +39,13 @@ export function useServices(trigger: number) {
         setLoading(false);
       })
       .catch((err: any) => {
+        if (err.name === 'AbortError') return;
         setError(err.message || 'Failed to fetch');
         setLoading(false);
       });
-  };
+  }, []);
 
-  useEffect(() => { refetch(); }, [trigger]);
+  useEffect(() => { refetch(); return () => abortRef.current?.abort(); }, [trigger]);
 
   return { services, loading, error, refetch };
 }
