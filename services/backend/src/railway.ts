@@ -12,16 +12,16 @@ const client = new GraphQLClient(RAILWAY_API_URL, {
 });
 
 const REDEPLOY = gql`mutation deploymentRedeploy($id: String!) { deploymentRedeploy(id: $id) }`;
-const GET_DEPLOYS = gql`query deployments($input: DeploymentListInput!, $first: Int) { deployments(input: $input, first: $first) { edges { node { id status } } } }`;
+const GET_DEPLOYS = gql`query getDeployments($serviceId: String!, $environmentId: String!) { service(id: $serviceId) { deployments(environmentId: $environmentId, first: 5) { edges { node { id status } } } } }`;
 const GET_STATUS = gql`query deployment($id: String!) { deployment(id: $id) { id status url } }`;
 const UPSERT_VAR = gql`mutation variableUpsert($input: VariableUpsertInput!) { variableUpsert(input: $input) }`;
 
 export async function getLatestDeploymentId(): Promise<string | null> {
   if (!API_TOKEN) return null;
   try {
-    const r: any = await client.request(GET_DEPLOYS, { input: { projectId: PROJ_ID, serviceId: KC_SVC_ID, environmentId: KC_ENV_ID }, first: 5 });
+    const r: any = await client.request(GET_DEPLOYS, { serviceId: KC_SVC_ID, environmentId: KC_ENV_ID });
     console.log('[railway] deployments query:', JSON.stringify(r));
-    return r?.deployments?.edges?.[0]?.node?.id || null;
+    return r?.service?.deployments?.edges?.[0]?.node?.id || null;
   } catch (e: any) {
     console.error('[railway] deployments query failed:', e?.message || e);
     return null;

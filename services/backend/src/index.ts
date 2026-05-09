@@ -36,8 +36,10 @@ let serviceStatus: ServiceStatus = { service: 'keycloak', status: 'healthy', las
 app.get('/api/status', (_, res) => res.json({ status: serviceStatus, currentIncident }));
 app.get('/api/health', (_, res) => res.json({ status: 'UP', timestamp: new Date().toISOString() }));
 app.get('/api/debug', async (_, res) => {
-  try { res.json({ deploymentId: await getLatestDeploymentId() }); }
-  catch (e: any) { res.json({ error: e.message }); }
+  try {
+    const id = await getLatestDeploymentId();
+    res.json({ deploymentId: id, projectId: process.env.RAILWAY_PROJECT_ID || '(not set)', serviceId: process.env.RAILWAY_KEYCLOAK_SERVICE_ID || '(not set)', environmentId: process.env.RAILWAY_KEYCLOAK_ENVIRONMENT_ID || '(not set)', hasToken: !!process.env.RAILWAY_API_TOKEN });
+  } catch (e: any) { res.json({ error: e.message, stack: e.stack }); }
 });
 
 // --- Demo Controls ---
