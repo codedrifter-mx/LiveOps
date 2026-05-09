@@ -1,6 +1,6 @@
 import { useState } from 'react';
-interface Props { actionName: string; description: string; onApprove: () => Promise<void>; onReject: () => void; onDismiss: () => void; }
-export function ApprovalCard({ actionName, description, onApprove, onReject, onDismiss }: Props) {
+interface Props { actionName: string; description: string; onApprove: () => Promise<void>; onReject: () => void; }
+export function ApprovalCard({ actionName, description, onApprove, onReject }: Props) {
   const [busy, setBusy] = useState(false);
   if (!actionName) return null;
   return <div className="approval-card">
