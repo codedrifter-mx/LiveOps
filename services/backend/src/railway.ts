@@ -11,8 +11,7 @@ const client = new GraphQLClient(RAILWAY_API_URL, {
   headers: { 'Project-Access-Token': API_TOKEN },
 });
 
-const STOP = gql`mutation deploymentStop($id: String!) { deploymentStop(id: $id) }`;
-const REDEPLOY = gql`mutation serviceInstanceRedeploy($serviceId: String!, $environmentId: String!) { serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId) }`;
+const REDEPLOY = gql`mutation deploymentRedeploy($id: String!) { deploymentRedeploy(id: $id) }`;
 const GET_DEPLOYS = gql`query deployments($input: DeploymentListInput!, $first: Int) { deployments(input: $input, first: $first) { edges { node { id status } } } }`;
 const GET_STATUS = gql`query deployment($id: String!) { deployment(id: $id) { id status url } }`;
 const UPSERT_VAR = gql`mutation variableUpsert($input: VariableUpsertInput!) { variableUpsert(input: $input) }`;
@@ -36,14 +35,18 @@ export async function restoreJavaOpts(): Promise<RestartResult> {
 }
 
 export async function redeployService(): Promise<RestartResult> {
-  const r: any = await client.request(REDEPLOY, { serviceId: KC_SVC_ID, environmentId: KC_ENV_ID });
-  return { success: true, message: `Redeploy: ${r?.serviceInstanceRedeploy || ''}` };
+  const id = await getLatestDeploymentId();
+  if (!id) return { success: false, message: 'No deployment found' };
+  const r: any = await client.request(REDEPLOY, { id });
+  return { success: true, message: `Redeploy: ${r?.deploymentRedeploy || id}` };
 }
 
 export async function recoverAndRedeploy(): Promise<RestartResult> {
   await upsertVar('JAVA_OPTS', '-Xms256m -Xmx384m');
-  const r: any = await client.request(REDEPLOY, { serviceId: KC_SVC_ID, environmentId: KC_ENV_ID });
-  return { success: true, message: `Recovered + redeployed: ${r?.serviceInstanceRedeploy || ''}` };
+  const id = await getLatestDeploymentId();
+  if (!id) return { success: false, message: 'No deployment found' };
+  const r: any = await client.request(REDEPLOY, { id });
+  return { success: true, message: `Recovered + redeployed: ${r?.deploymentRedeploy || id}` };
 }
 
 export async function getKeycloakStatus(): Promise<{ status: string; url?: string }> {
