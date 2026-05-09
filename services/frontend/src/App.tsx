@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react';
-import { CopilotKit } from '@copilotkit/react-core';
+import { CopilotKit, useCopilotAction, CopilotTask, useCopilotContext } from '@copilotkit/react-core';
 import { useSSE, IncidentEvent } from './hooks/useSSE';
 import { COPILOTKIT_CONFIG } from './lib/copilotkit';
 import { Sidebar } from './components/Sidebar';
 import { NOCHeader } from './components/NOCHeader';
 import { EmptyState } from './components/EmptyState';
 import { IncidentBanner } from './components/IncidentBanner';
-import { StatCard } from './components/StatCard';
-import { ActionButton } from './components/ActionButton';
 import { ApprovalCard } from './components/ApprovalCard';
 import { FeedItem } from './components/FeedItem';
 import { FooterStats } from './components/FooterStats';
+import { RemediationCard } from './components/RemediationCard';
 import './App.css';
 
 const BACKEND_URL = (window as any).__BACKEND_URL__ || '';
@@ -24,6 +23,10 @@ function App() {
   const [result, setResult] = useState<string | null>(null);
 
   const [acknowledged, setAcknowledged] = useState(false);
+  const context = useCopilotContext();
+  const [remediationData, setRemediationData] = useState<{ analysis: string; buttons: any[] } | null>(null);
+  const [agentLoading, setAgentLoading] = useState(false);
+  const [agentError, setAgentError] = useState<string | null>(null);
 
   useEffect(() => {
     if (lastEvent) {
@@ -43,6 +46,41 @@ function App() {
       }
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!isDown || !currentIncident) return;
+    setAgentLoading(true);
+    setAgentError(null);
+    setRemediationData(null);
+    const task = new CopilotTask({
+      instructions: `[INCIDENT ALERT] Keycloak is DOWN.
+Error rate: ${currentIncident.errorRate || 'N/A'}
+Impacted users: ${currentIncident.impactedUsers || 'N/A'}
+Last healthy: ${currentIncident.lastHealthy || 'N/A'}
+
+Analyze the situation and call show-remediation with your analysis and recommended action buttons.`
+    });
+    task.run(context).catch((err: any) => {
+      setAgentError(err.message || 'Agent analysis failed');
+      setAgentLoading(false);
+    });
+  }, [isDown]);
+
+  useCopilotAction({
+    name: 'show-remediation',
+    handler: (args) => {
+      setRemediationData({ analysis: args.analysis, buttons: args.buttons });
+      setAgentLoading(false);
+    },
+    parameters: [
+      { name: 'analysis', type: 'string', description: 'AI analysis', required: true },
+      { name: 'buttons', type: 'object[]', description: 'Action buttons', required: true, attributes: [
+        { name: 'label', type: 'string' },
+        { name: 'action', type: 'string', enum: ['redeploy-keycloak', 'recover-keycloak', 'get-keycloak-status'] },
+        { name: 'variant', type: 'string', enum: ['lilac', 'mint', 'blue', 'outline'] },
+      ]},
+    ],
+  });
 
   const handleApprove = async () => {
     const ep = pendingAction === 'redeploy-keycloak' ? 'redeploy-keycloak' : pendingAction === 'recover-keycloak' ? 'recover-memory' : pendingAction === 'get-keycloak-status' ? 'railway-status' : pendingAction;
@@ -70,22 +108,13 @@ function App() {
             ) : (
               <div className="dashboard-grid">
                 <div className="" style={{display:'flex',flexDirection:'column',gap:24}}>
-                  <div className="stat-grid">
-                    <StatCard label="Service" value="Keycloak" color="red" />
-                    <StatCard label="Status" value="Down" color="red" />
-                    <StatCard label="Error Rate" value="98.2%" trend="+84% vs baseline" color="orange" />
-                    <StatCard label="Impact" value="1.2k Users" trend="Growing..." color="orange" />
-                  </div>
-
-                  <div className="remediation-card">
-                    <div className="section-label">Available Remediation</div>
-                    <div className="action-grid">
-                      <ActionButton label="Redeploy" variant="lilac" onClick={() => setPendingAction('redeploy-keycloak')} />
-                      <ActionButton label="Recover Memory" variant="mint" onClick={() => setPendingAction('recover-keycloak')} />
-                      <ActionButton label="Status Check" variant="blue" onClick={() => setPendingAction('get-keycloak-status')} />
-                      <ActionButton label="Generate Action" variant="outline" onClick={() => {}} />
-                    </div>
-                  </div>
+                  <RemediationCard
+                    analysis={remediationData?.analysis || ''}
+                    buttons={remediationData?.buttons || []}
+                    onAction={(action) => setPendingAction(action)}
+                    loading={agentLoading}
+                    error={agentError}
+                  />
 
                   <ApprovalCard
                     actionName={pendingAction === 'redeploy-keycloak' ? 'Redeploy Keycloak' : pendingAction === 'recover-keycloak' ? 'Recover Keycloak Memory' : pendingAction === 'get-keycloak-status' ? 'Check Keycloak Status' : ''}
