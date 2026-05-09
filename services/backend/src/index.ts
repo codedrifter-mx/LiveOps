@@ -68,7 +68,11 @@ const runtime = new CopilotRuntime({
     },
   ],
 });
-app.use('/api/copilotkit', copilotRuntimeNodeExpressEndpoint({ runtime, serviceAdapter: new OpenAIAdapter(), endpoint: '/api/copilotkit' }));
+if (process.env.OPENAI_API_KEY) {
+  app.use('/api/copilotkit', copilotRuntimeNodeExpressEndpoint({ runtime, serviceAdapter: new OpenAIAdapter(), endpoint: '/api/copilotkit' }));
+} else {
+  console.warn('[liveops] OPENAI_API_KEY not set — CopilotKit endpoint disabled');
+}
 
 // --- Health Poller ---
 let lastHealthyTime: string | null = null;
