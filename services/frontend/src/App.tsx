@@ -11,6 +11,7 @@ import { ApprovalCard } from './components/ApprovalCard';
 import { FeedItem } from './components/FeedItem';
 import { FooterStats } from './components/FooterStats';
 import { RemediationCard } from './components/RemediationCard';
+import { REMEDIATION_AGENT_RUN_OPTIONS } from './lib/remediation-agent';
 import './App.css';
 
 const BACKEND_URL = (window as any).__BACKEND_URL__ || '';
@@ -80,11 +81,12 @@ Last healthy: ${currentIncident.lastHealthy || 'N/A'}
 
 Analyze the situation and call show-remediation with your analysis and recommended action buttons.`;
     agent.setMessages([{ id: crypto.randomUUID(), role: 'user', content: instructions }]);
-    copilotkit.runAgent({ agent, forwardedProps: { toolChoice: 'required' } }).catch((err: any) => {
+    copilotkit.runAgent({ agent, ...REMEDIATION_AGENT_RUN_OPTIONS }).catch((err: any) => {
       setAgentError(err?.message || 'Agent analysis failed');
+    }).finally(() => {
       setAgentLoading(false);
     });
-  }, [isDown]);
+  }, [isDown, currentIncident, agent, copilotkit]);
 
   const handleApprove = async () => {
     const ep = pendingAction === 'redeploy-keycloak' ? 'redeploy-keycloak' : pendingAction === 'recover-keycloak' ? 'recover-memory' : pendingAction === 'get-keycloak-status' ? 'railway-status' : pendingAction;
