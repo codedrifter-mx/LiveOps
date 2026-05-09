@@ -4,7 +4,8 @@ import { IncidentEvent, ServiceStatus } from './types';
 import { getKeycloakStatus, restoreJavaOpts, redeployService, recoverAndRedeploy, getLatestDeploymentId, getEnvironmentServices, crashKeycloakWithOom } from './railway';
 import { SYSTEM_PROMPT } from './agent';
 import { addIncident, getAllIncidents, getIncident } from './lib/incident-store';
-import { CopilotRuntime, GoogleGenerativeAIAdapter, copilotRuntimeNodeHttpEndpoint } from '@copilotkit/runtime';
+import { z } from 'zod';
+import { CopilotRuntime, BuiltInAgent, createCopilotEndpointExpress, defineTool } from '@copilotkit/runtime/v2';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '4000', 10);
@@ -13,11 +14,7 @@ const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || '5000', 10);
 const FAILURE_THRESHOLD = parseInt(process.env.FAILURE_THRESHOLD || '3', 10);
 
 app.use(cors());
-const jsonParser = express.json();
-app.use((req, res, next) => {
-  if (req.path.startsWith('/api/copilotkit')) return next();
-  jsonParser(req, res, next);
-});
+app.use(express.json());
 
 // --- SSE ---
 const sseClients: Set<express.Response> = new Set();
@@ -61,32 +58,44 @@ app.get('/api/services', async (_, res) => {
 app.get('/api/incidents', (_, res) => res.json(getAllIncidents()));
 app.get('/api/incidents/:id', (req, res) => { const i = getIncident(req.params.id); i ? res.json(i) : res.status(404).json({ error: 'Not found' }); });
 
-// --- CopilotKit v1.57.1 Runtime ---
-const runtime = new CopilotRuntime({
-  actions: [
-    {
-      name: 'redeploy-keycloak',
-      description: 'Redeploy Keycloak service on Railway',
-      handler: async () => (await redeployService()).message,
-    },
-    {
-      name: 'recover-keycloak',
-      description: 'Restore JAVA_OPTS memory and redeploy Keycloak',
-      handler: async () => (await recoverAndRedeploy()).message,
-    },
-    {
-      name: 'get-keycloak-status',
-      description: 'Check Keycloak deployment status on Railway',
-      handler: async () => JSON.stringify(await getKeycloakStatus()),
-    },
-  ],
-});
+// --- CopilotKit v2 Runtime ---
 if (process.env.GOOGLE_API_KEY) {
   console.log('[liveops] GOOGLE_API_KEY detected, registering CopilotKit endpoint...');
   try {
-    const adapter = new GoogleGenerativeAIAdapter({ model: 'gemini-2.0-flash', apiKey: process.env.GOOGLE_API_KEY });
-    const kitHandler = copilotRuntimeNodeHttpEndpoint({ runtime, serviceAdapter: adapter, endpoint: '/' });
-    app.use('/api/copilotkit', async (req, res, next) => { try { await kitHandler(req, res); } catch (e) { next(e); } });
+    const agent = new BuiltInAgent({
+      model: 'google/gemini-2.0-flash',
+      apiKey: process.env.GOOGLE_API_KEY,
+      prompt: SYSTEM_PROMPT,
+      tools: [
+        defineTool({
+          name: 'redeploy-keycloak',
+          description: 'Redeploy Keycloak service on Railway',
+          parameters: z.object({}),
+          execute: async () => (await redeployService()).message,
+        }),
+        defineTool({
+          name: 'recover-keycloak',
+          description: 'Restore JAVA_OPTS memory and redeploy Keycloak',
+          parameters: z.object({}),
+          execute: async () => (await recoverAndRedeploy()).message,
+        }),
+        defineTool({
+          name: 'get-keycloak-status',
+          description: 'Check Keycloak deployment status on Railway',
+          parameters: z.object({}),
+          execute: async () => JSON.stringify(await getKeycloakStatus()),
+        }),
+      ],
+      maxSteps: 10,
+    });
+    const copilotRouter = createCopilotEndpointExpress({
+      basePath: '/api/copilotkit',
+      cors: false,
+      runtime: new CopilotRuntime({
+        agents: { default: agent },
+      }),
+    });
+    app.use(copilotRouter);
     console.log('[liveops] CopilotKit endpoint registered at /api/copilotkit');
   } catch (e: any) {
     console.error('[liveops] Failed to register CopilotKit endpoint:', e.message);
