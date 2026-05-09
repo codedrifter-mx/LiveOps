@@ -1,11 +1,6 @@
 import { ServiceInfo } from '../hooks/useServices';
 
-interface Props {
-  services: ServiceInfo[];
-  loading: boolean;
-  error: string | null;
-  onRetry: () => void;
-}
+interface Props { services: ServiceInfo[]; loading: boolean; error: string | null; onRetry: () => void; }
 
 function statusDot(status: string | null, isSleeping: boolean): string {
   if (isSleeping) return 'disconnected';
@@ -29,39 +24,37 @@ function statusLabel(status: string | null, isSleeping: boolean): string {
 function builderIcon(builder: string | null): string {
   if (builder === 'DOCKERFILE') return 'Dockerfile';
   if (builder === 'NIXPACKS') return 'Nixpacks';
-  return builder || '—';
+  return builder || '\u2014';
 }
 
 export function ServicesList({ services, loading, error, onRetry }: Props) {
   if (loading) {
-    return <div className="card"><h2>Services</h2><div style={{color:'var(--text-secondary)',fontSize:14}}>Loading services...</div></div>;
+    return <div className="card"><h2>Services</h2><div style={{color:'var(--muted)',fontSize:14}}>Loading services...</div></div>;
   }
-
   if (error) {
-    return <div className="card"><h2>Services</h2><div style={{color:'var(--accent-red)',fontSize:14}}>{error} <button className="btn" onClick={onRetry} style={{marginLeft:8,padding:'4px 12px',fontSize:12}}>Retry</button></div></div>;
+    return <div className="card"><h2>Services</h2><div style={{color:'var(--red)',fontSize:14}}>{error} <button className="btn" onClick={onRetry} style={{marginLeft:8,padding:'4px 12px',fontSize:12}}>Retry</button></div></div>;
   }
-
   if (services.length === 0) {
-    return <div className="card"><h2>Services</h2><div style={{color:'var(--text-secondary)',fontSize:14}}>No services found</div></div>;
+    return <div className="card"><h2>Services</h2><div style={{color:'var(--muted)',fontSize:14}}>No services found</div></div>;
   }
-
-  return <div className="card"><h2>Services <span style={{fontWeight:400,color:'var(--text-secondary)'}}>{services.length} instances</span></h2>
-    <div className="incident-list">
+  return <div className="gen-card">
+    <div className="gen-label">Services <span style={{fontWeight:400}}>{services.length} instances</span></div>
+    <div className="service-list">
       {services.map(s => (
-        <div key={s.id} className="incident-item" style={{borderLeftColor:'var(--accent-green)'}}>
-          <div style={{display:'flex',alignItems:'center',gap:8}}>
+        <div key={s.id} className="service-item">
+          <div className="svc-row">
             <span className={`dot ${statusDot(s.status, s.isSleeping)}`} />
-            <span className="incident-service">{s.serviceName}</span>
-            <span style={{fontSize:12,color:'var(--text-secondary)'}}>{statusLabel(s.status, s.isSleeping)}</span>
-            {s.region && <span style={{fontSize:12,color:'var(--text-secondary)',marginLeft:'auto'}}>{s.region}</span>}
+            <span className="svc-name">{s.serviceName}</span>
+            <span className="svc-label">{statusLabel(s.status, s.isSleeping)}</span>
+            {s.region && <span className="svc-region">{s.region}</span>}
           </div>
-          <div className="incident-status" style={{marginTop:4}}>
-            {s.builder && <span>Built with {builderIcon(s.builder)}</span>}
-            {s.numReplicas != null && <span> | {s.numReplicas} replica{s.numReplicas !== 1 ? 's' : ''}</span>}
-            {s.source && <span> | {s.source}</span>}
+          <div className="svc-meta">
+            {s.builder && <>Built with {builderIcon(s.builder)}</>}
+            {s.numReplicas != null && <> | {s.numReplicas} replica{s.numReplicas !== 1 ? 's' : ''}</>}
+            {s.source && <> | {s.source}</>}
           </div>
-          {s.commitMessage && <div className="incident-status" style={{marginTop:2}}>{s.commitMessage}{s.commitAuthor ? ` — ${s.commitAuthor}` : ''}</div>}
-          {s.domains.length > 0 && <div className="incident-time" style={{marginTop:2}}>{s.domains.join(', ')}</div>}
+          {s.commitMessage && <div className="svc-commit">{s.commitMessage}{s.commitAuthor ? ` \u2014 ${s.commitAuthor}` : ''}</div>}
+          {s.domains.length > 0 && <div className="svc-domains">{s.domains.join(', ')}</div>}
         </div>
       ))}
     </div>

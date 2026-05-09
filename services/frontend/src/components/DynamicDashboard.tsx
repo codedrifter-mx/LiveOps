@@ -1,17 +1,17 @@
 interface Props { incident: { service: string; status: string; errorRate?: string; impactedUsers?: number; timestamp: string; lastHealthy?: string } | null }
 export function DynamicDashboard({ incident }: Props) {
-  if (!incident) return <div className="card" style={{textAlign:'center',padding:32,color:'var(--text-secondary)'}}>No active incident</div>;
-  const box = (label: string, val: string) => <div style={{background:'var(--bg-tertiary)',padding:16,borderRadius:8}}><div style={{fontSize:12,color:'var(--text-secondary)'}}>{label}</div><div style={{fontSize:18,fontWeight:700}}>{val}</div></div>;
-  return <div className="card"><h2>Incident Dashboard</h2>
-    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginTop:12}}>
-      {box('Service', incident.service)}
-      {box('Status', incident.status.toUpperCase())}
-      {box('Error Rate', incident.errorRate || 'N/A')}
-      {box('Impacted', `${incident.impactedUsers || 'N/A'} users`)}
+  if (!incident) return null;
+  return <div className="gen-card">
+    <div className="gen-label">Incident Dashboard</div>
+    <div className="gen-grid">
+      <div className="gen-box"><div className="gen-box-label">Service</div><div className="gen-box-value">{incident.service}</div></div>
+      <div className="gen-box"><div className="gen-box-label">Status</div><div className="gen-box-value">{incident.status.toUpperCase()}</div></div>
+      <div className="gen-box"><div className="gen-box-label">Error Rate</div><div className="gen-box-value">{incident.errorRate || 'N/A'}</div></div>
+      <div className="gen-box"><div className="gen-box-label">Impacted</div><div className="gen-box-value">{incident.impactedUsers || 'N/A'}</div></div>
     </div>
-    <div style={{marginTop:12,fontSize:13,color:'var(--text-secondary)'}}>
+    <div className="gen-meta">
       Detected: {new Date(incident.timestamp).toLocaleString()}
-      {incident.lastHealthy && ` | Last healthy: ${new Date(incident.lastHealthy).toLocaleString()}`}
+      {incident.lastHealthy && <> | Last healthy: {new Date(incident.lastHealthy).toLocaleString()}</>}
     </div>
   </div>;
 }
