@@ -4,7 +4,7 @@ import { IncidentEvent, ServiceStatus } from './types';
 import { getKeycloakStatus, restoreJavaOpts, redeployService, recoverAndRedeploy, getLatestDeploymentId, getEnvironmentServices, crashKeycloakWithOom } from './railway';
 import { SYSTEM_PROMPT } from './agent';
 import { addIncident, getAllIncidents, getIncident } from './lib/incident-store';
-import { CopilotRuntime, GoogleGenerativeAIAdapter, copilotRuntimeNodeExpressEndpoint } from '@copilotkit/runtime';
+import { CopilotRuntime, GoogleGenerativeAIAdapter, copilotRuntimeNodeHttpEndpoint } from '@copilotkit/runtime';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '4000', 10);
@@ -13,7 +13,11 @@ const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || '5000', 10);
 const FAILURE_THRESHOLD = parseInt(process.env.FAILURE_THRESHOLD || '3', 10);
 
 app.use(cors());
-app.use(express.json());
+const jsonParser = express.json();
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/copilotkit')) return next();
+  jsonParser(req, res, next);
+});
 
 // --- SSE ---
 const sseClients: Set<express.Response> = new Set();
@@ -81,7 +85,8 @@ if (process.env.GOOGLE_API_KEY) {
   console.log('[liveops] GOOGLE_API_KEY detected, registering CopilotKit endpoint...');
   try {
     const adapter = new GoogleGenerativeAIAdapter({ model: 'gemini-2.0-flash', apiKey: process.env.GOOGLE_API_KEY });
-    app.use('/api/copilotkit', copilotRuntimeNodeExpressEndpoint({ runtime, serviceAdapter: adapter, endpoint: '/' }));
+    const kitHandler = copilotRuntimeNodeHttpEndpoint({ runtime, serviceAdapter: adapter, endpoint: '/api/copilotkit' });
+    app.use('/api/copilotkit', (req, res, next) => kitHandler(req, res));
     console.log('[liveops] CopilotKit endpoint registered at /api/copilotkit');
   } catch (e: any) {
     console.error('[liveops] Failed to register CopilotKit endpoint:', e.message);
