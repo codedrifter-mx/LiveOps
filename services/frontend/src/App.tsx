@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
 import { CopilotKit } from '@copilotkit/react-core';
-import { CopilotSidebar } from '@copilotkit/react-ui';
-import '@copilotkit/react-ui/styles.css';
 import { useSSE, IncidentEvent } from './hooks/useSSE';
 import { COPILOTKIT_CONFIG } from './lib/copilotkit';
-import { DynamicDashboard } from './components/DynamicDashboard';
-import { ActionPanel } from './components/ActionPanel';
-import { ApprovalFlow } from './components/ApprovalFlow';
 import { useServices } from './hooks/useServices';
+import { Sidebar } from './components/Sidebar';
+import { NOCHeader } from './components/NOCHeader';
+import { EmptyState } from './components/EmptyState';
+import { IncidentBanner } from './components/IncidentBanner';
+import { StatCard } from './components/StatCard';
+import { ActionButton } from './components/ActionButton';
+import { ApprovalCard } from './components/ApprovalCard';
+import { FeedItem } from './components/FeedItem';
+import { FooterStats } from './components/FooterStats';
+import { DynamicDashboard } from './components/DynamicDashboard';
 import { ServicesList } from './components/ServicesList';
 import './App.css';
 
@@ -21,6 +26,7 @@ function App() {
   const [pendingAction, setPendingAction] = useState('');
   const [result, setResult] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [acknowledged, setAcknowledged] = useState(false);
 
   useEffect(() => {
     if (lastEvent) {
@@ -28,6 +34,7 @@ function App() {
       setIsDown(lastEvent.type === 'incident');
       setCurrentIncident(lastEvent);
       setRefreshTick(t => t + 1);
+      setAcknowledged(false);
     }
   }, [lastEvent]);
 
@@ -43,8 +50,6 @@ function App() {
 
   const { services, loading: svcLoading, error: svcError, refetch: refetchServices } = useServices(refreshTick);
 
-  const handleAction = (action: string) => setPendingAction(action);
-
   const handleApprove = async () => {
     const ep = pendingAction === 'redeploy-keycloak' ? 'redeploy-keycloak' : pendingAction === 'recover-keycloak' ? 'recover-memory' : pendingAction === 'get-keycloak-status' ? 'railway-status' : pendingAction;
     try { const r = await fetch(`${BACKEND_URL}/api/${ep}`, { method: 'POST' }); setResult(JSON.stringify(await r.json(), null, 2)); }
@@ -55,37 +60,80 @@ function App() {
   const handleReject = () => setPendingAction('');
   const handleDismiss = () => setPendingAction('');
 
+  const status = !connected ? 'offline' : isDown ? 'incident' : 'healthy';
+
   return (
     <CopilotKit runtimeUrl={COPILOTKIT_CONFIG.runtimeUrl}>
-      <div className="app">
-        <header className="header">
-          <h1>LiveOps</h1>
-          <div className="connection"><span className={`dot ${connected ? 'connected' : 'disconnected'}`} />{connected ? 'Connected' : 'Disconnected'}</div>
-        </header>
-        <div className="card"><h2>Service Status</h2>
-          <div className="status-row"><span className={`dot ${isDown ? 'down' : 'healthy'}`} /><span>Keycloak: {isDown ? 'DOWN' : 'Healthy'}</span></div>
-        </div>
-        {isDown && <DynamicDashboard incident={currentIncident} />}
-        {isDown && <ActionPanel isDown={isDown} onAction={handleAction} />}
-        <ApprovalFlow actionName={pendingAction} description={`Execute ${pendingAction} on Keycloak via Railway API`} onApprove={handleApprove} onReject={handleReject} onDismiss={handleDismiss} />
-        <ServicesList services={services} loading={svcLoading} error={svcError} onRetry={refetchServices} />
-        <div className="card"><h2>Controls</h2>
-          <div className="actions">
-            <button className="btn btn-success" onClick={async()=>{const r=await fetch(BACKEND_URL+'/api/recover-memory',{method:'POST'});setResult(JSON.stringify(await r.json(),null,2))}}>Recover Memory</button>
-            <button className="btn btn-primary" onClick={async()=>{const r=await fetch(BACKEND_URL+'/api/redeploy-keycloak',{method:'POST'});setResult(JSON.stringify(await r.json(),null,2))}}>Redeploy</button>
+      <div className="layout">
+        <Sidebar connected={connected} activeNav="Dashboard" />
+        <div className="main">
+          <NOCHeader status={status} />
+          <div className="content">
+            {isDown && !acknowledged && <IncidentBanner onAcknowledge={() => setAcknowledged(true)} />}
+
+            {!isDown ? (
+              <EmptyState onSimulate={async () => {
+                try { await fetch(BACKEND_URL + '/api/redeploy-keycloak', { method: 'POST' }); } catch {}
+              }} />
+            ) : (
+              <div className="dashboard-grid">
+                <div className="" style={{display:'flex',flexDirection:'column',gap:24}}>
+                  <div className="stat-grid">
+                    <StatCard label="Service" value="Keycloak" color="red" />
+                    <StatCard label="Status" value="Down" color="red" />
+                    <StatCard label="Error Rate" value="98.2%" trend="+84% vs baseline" color="orange" />
+                    <StatCard label="Impact" value="1.2k Users" trend="Growing..." color="orange" />
+                  </div>
+
+                  <div className="remediation-card">
+                    <div className="section-label">Available Remediation</div>
+                    <div className="action-grid">
+                      <ActionButton label="Redeploy" variant="lilac" onClick={() => setPendingAction('redeploy-keycloak')} />
+                      <ActionButton label="Recover Memory" variant="mint" onClick={() => setPendingAction('recover-keycloak')} />
+                      <ActionButton label="Status Check" variant="blue" onClick={() => setPendingAction('get-keycloak-status')} />
+                      <ActionButton label="Generate Action" variant="outline" onClick={() => {}} />
+                    </div>
+                  </div>
+
+                  <ApprovalCard
+                    actionName={pendingAction === 'redeploy-keycloak' ? 'Redeploy Keycloak' : pendingAction === 'recover-keycloak' ? 'Recover Keycloak Memory' : pendingAction === 'get-keycloak-status' ? 'Check Keycloak Status' : ''}
+                    description={pendingAction ? `Execute ${pendingAction} on Keycloak via Railway API` : ''}
+                    onApprove={handleApprove}
+                    onReject={handleReject}
+                  />
+
+                  {result && <div className="result-box">{result}</div>}
+
+                  <ServicesList services={services} loading={svcLoading} error={svcError} onRetry={refetchServices} />
+                </div>
+
+                <div className="" style={{display:'flex',flexDirection:'column',gap:24}}>
+                  <div className="feed-card">
+                    <div className="feed-header"><span>Incident Timeline</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></div>
+                    <div className="feed-body">
+                      {incidents.length === 0 ?
+                        <div style={{textAlign:'center',padding:40,color:'var(--muted)',fontSize:14}}>No incidents recorded</div> :
+                        incidents.map(inc => (
+                          <FeedItem
+                            key={inc.id}
+                            status={inc.type === 'incident' ? 'critical' : 'recovery'}
+                            time={new Date(inc.timestamp).toLocaleTimeString()}
+                            service={inc.service}
+                            detail={inc.type === 'incident' ? `Error rate: ${inc.errorRate || '100%'}, ${inc.impactedUsers || 15} users affected` : 'Service recovered'}
+                          />
+                        ))
+                      }
+                      <FeedItem status="info" time="14:03:02" service="CopilotAgent" detail="Root cause identified: Out of Memory on node-4" />
+                    </div>
+                  </div>
+
+                  <DynamicDashboard incident={currentIncident} />
+                </div>
+              </div>
+            )}
+
+            <FooterStats />
           </div>
-          {result && <div className="result-box">{result}</div>}
-        </div>
-        <CopilotSidebar defaultOpen={false} labels={{ title: 'LiveOps Agent', initial: 'Ask me about incidents or remediation.' }} />
-        <div className="card"><h2>Incident Feed</h2>
-          {incidents.length === 0 ? <div className="empty-state"><div className="icon">&#128154;</div><p>All systems operational</p></div> :
-            <ul className="incident-list">{incidents.map(inc => (
-              <li key={inc.id} className={`incident-item ${inc.type}`}>
-                <div className="incident-service">{inc.service} — {inc.status === 'down' ? 'DOWN' : 'Healthy'}</div>
-                <div className="incident-status">{inc.type === 'incident' ? `Error rate: ${inc.errorRate || '100%'}, ${inc.impactedUsers || 15} users` : 'Service recovered'}</div>
-                <div className="incident-time">{new Date(inc.timestamp).toLocaleString()}</div>
-              </li>
-            ))}</ul>}
         </div>
       </div>
     </CopilotKit>
