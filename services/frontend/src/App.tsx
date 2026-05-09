@@ -7,6 +7,8 @@ import { COPILOTKIT_CONFIG } from './lib/copilotkit';
 import { DynamicDashboard } from './components/DynamicDashboard';
 import { ActionPanel } from './components/ActionPanel';
 import { ApprovalFlow } from './components/ApprovalFlow';
+import { useServices } from './hooks/useServices';
+import { ServicesList } from './components/ServicesList';
 import './App.css';
 
 const BACKEND_URL = (window as any).__BACKEND_URL__ || '';
@@ -18,12 +20,14 @@ function App() {
   const [currentIncident, setCurrentIncident] = useState<IncidentEvent | null>(null);
   const [pendingAction, setPendingAction] = useState('');
   const [result, setResult] = useState<string | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     if (lastEvent) {
       setIncidents(prev => [lastEvent, ...prev].slice(0, 20));
       setIsDown(lastEvent.type === 'incident');
       setCurrentIncident(lastEvent);
+      setRefreshTick(t => t + 1);
     }
   }, [lastEvent]);
 
@@ -36,6 +40,8 @@ function App() {
       }
     }).catch(() => {});
   }, []);
+
+  const { services, loading: svcLoading, error: svcError, refetch: refetchServices } = useServices(refreshTick);
 
   const handleAction = (action: string) => setPendingAction(action);
 
@@ -70,6 +76,7 @@ function App() {
           {result && <div className="result-box">{result}</div>}
         </div>
         <CopilotSidebar defaultOpen={false} labels={{ title: 'LiveOps Agent', initial: 'Ask me about incidents or remediation.' }} />
+        <ServicesList services={services} loading={svcLoading} error={svcError} onRetry={refetchServices} />
         <div className="card"><h2>Incident Feed</h2>
           {incidents.length === 0 ? <div className="empty-state"><div className="icon">&#128154;</div><p>All systems operational</p></div> :
             <ul className="incident-list">{incidents.map(inc => (
