@@ -4,7 +4,7 @@ import { IncidentEvent, ServiceStatus } from './types';
 import { stopKeycloakDeployment, restartKeycloakService, getKeycloakStatus, crashKeycloakWithOom, restoreJavaOpts, restoreAndRedeploy } from './railway';
 import { SYSTEM_PROMPT } from './agent';
 import { addIncident, getAllIncidents, getIncident } from './lib/incident-store';
-import { CopilotRuntime, OpenAIAdapter, copilotRuntimeNodeExpressEndpoint } from '@copilotkit/runtime';
+import { CopilotRuntime, GoogleGenerativeAIAdapter, copilotRuntimeNodeExpressEndpoint } from '@copilotkit/runtime';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '4000', 10);
@@ -68,10 +68,10 @@ const runtime = new CopilotRuntime({
     },
   ],
 });
-if (process.env.OPENAI_API_KEY) {
-  app.use('/api/copilotkit', copilotRuntimeNodeExpressEndpoint({ runtime, serviceAdapter: new OpenAIAdapter(), endpoint: '/api/copilotkit' }));
+if (process.env.GOOGLE_API_KEY) {
+  app.use('/api/copilotkit', copilotRuntimeNodeExpressEndpoint({ runtime, serviceAdapter: new GoogleGenerativeAIAdapter({ model: 'gemini-2.0-flash', apiKey: process.env.GOOGLE_API_KEY }), endpoint: '/api/copilotkit' }));
 } else {
-  console.warn('[liveops] OPENAI_API_KEY not set — CopilotKit endpoint disabled');
+  console.warn('[liveops] GOOGLE_API_KEY not set — CopilotKit endpoint disabled');
 }
 
 // --- Health Poller ---
