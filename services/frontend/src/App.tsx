@@ -12,7 +12,7 @@ import { ActionButton } from './components/ActionButton';
 import { ApprovalCard } from './components/ApprovalCard';
 import { FeedItem } from './components/FeedItem';
 import { FooterStats } from './components/FooterStats';
-import { DynamicDashboard } from './components/DynamicDashboard';
+
 import { ServicesList } from './components/ServicesList';
 import './App.css';
 
@@ -72,9 +72,7 @@ function App() {
             {isDown && !acknowledged && <IncidentBanner onAcknowledge={() => setAcknowledged(true)} />}
 
             {!isDown ? (
-              <EmptyState onSimulate={async () => {
-                try { await fetch(BACKEND_URL + '/api/redeploy-keycloak', { method: 'POST' }); } catch {}
-              }} />
+              <EmptyState />
             ) : (
               <div className="dashboard-grid">
                 <div className="" style={{display:'flex',flexDirection:'column',gap:24}}>
@@ -127,7 +125,6 @@ function App() {
                     </div>
                   </div>
 
-                  <DynamicDashboard incident={currentIncident} />
                 </div>
               </div>
             )}
