@@ -68,6 +68,7 @@ function App() {
         {isDown && <DynamicDashboard incident={currentIncident} />}
         {isDown && <ActionPanel isDown={isDown} onAction={handleAction} />}
         <ApprovalFlow actionName={pendingAction} description={`Execute ${pendingAction} on Keycloak via Railway API`} onApprove={handleApprove} onReject={handleReject} onDismiss={handleDismiss} />
+        <ServicesList services={services} loading={svcLoading} error={svcError} onRetry={refetchServices} />
         <div className="card"><h2>Controls</h2>
           <div className="actions">
             <button className="btn btn-success" onClick={async()=>{const r=await fetch(BACKEND_URL+'/api/recover-memory',{method:'POST'});setResult(JSON.stringify(await r.json(),null,2))}}>Recover Memory</button>
@@ -76,7 +77,6 @@ function App() {
           {result && <div className="result-box">{result}</div>}
         </div>
         <CopilotSidebar defaultOpen={false} labels={{ title: 'LiveOps Agent', initial: 'Ask me about incidents or remediation.' }} />
-        <ServicesList services={services} loading={svcLoading} error={svcError} onRetry={refetchServices} />
         <div className="card"><h2>Incident Feed</h2>
           {incidents.length === 0 ? <div className="empty-state"><div className="icon">&#128154;</div><p>All systems operational</p></div> :
             <ul className="incident-list">{incidents.map(inc => (
