@@ -14,7 +14,7 @@ import './App.css';
 
 const BACKEND_URL = (window as any).__BACKEND_URL__ || '';
 
-function App() {
+function Dashboard() {
   const { lastEvent, connected } = useSSE();
   const [incidents, setIncidents] = useState<IncidentEvent[]>([]);
   const [isDown, setIsDown] = useState(false);
@@ -95,65 +95,71 @@ Analyze the situation and call show-remediation with your analysis and recommend
   const status = !connected ? 'offline' : isDown ? 'incident' : 'healthy';
 
   return (
-    <CopilotKit runtimeUrl={COPILOTKIT_CONFIG.runtimeUrl}>
-      <div className="layout">
-        <Sidebar connected={connected} activeNav="Dashboard" />
-        <div className="main">
-          <NOCHeader status={status} />
-          <div className="content">
-            {isDown && !acknowledged && <IncidentBanner onAcknowledge={() => setAcknowledged(true)} />}
+    <div className="layout">
+      <Sidebar connected={connected} activeNav="Dashboard" />
+      <div className="main">
+        <NOCHeader status={status} />
+        <div className="content">
+          {isDown && !acknowledged && <IncidentBanner onAcknowledge={() => setAcknowledged(true)} />}
 
-            {!isDown ? (
-              <EmptyState />
-            ) : (
-              <div className="dashboard-grid">
-                <div className="" style={{display:'flex',flexDirection:'column',gap:24}}>
-                  <RemediationCard
-                    analysis={remediationData?.analysis || ''}
-                    buttons={remediationData?.buttons || []}
-                    onAction={(action) => setPendingAction(action)}
-                    loading={agentLoading}
-                    error={agentError}
-                  />
+          {!isDown ? (
+            <EmptyState />
+          ) : (
+            <div className="dashboard-grid">
+              <div className="" style={{display:'flex',flexDirection:'column',gap:24}}>
+                <RemediationCard
+                  analysis={remediationData?.analysis || ''}
+                  buttons={remediationData?.buttons || []}
+                  onAction={(action) => setPendingAction(action)}
+                  loading={agentLoading}
+                  error={agentError}
+                />
 
-                  <ApprovalCard
-                    actionName={pendingAction === 'redeploy-keycloak' ? 'Redeploy Keycloak' : pendingAction === 'recover-keycloak' ? 'Recover Keycloak Memory' : pendingAction === 'get-keycloak-status' ? 'Check Keycloak Status' : ''}
-                    description={pendingAction ? `Execute ${pendingAction} on Keycloak via Railway API` : ''}
-                    onApprove={handleApprove}
-                    onReject={handleReject}
-                  />
+                <ApprovalCard
+                  actionName={pendingAction === 'redeploy-keycloak' ? 'Redeploy Keycloak' : pendingAction === 'recover-keycloak' ? 'Recover Keycloak Memory' : pendingAction === 'get-keycloak-status' ? 'Check Keycloak Status' : ''}
+                  description={pendingAction ? `Execute ${pendingAction} on Keycloak via Railway API` : ''}
+                  onApprove={handleApprove}
+                  onReject={handleReject}
+                />
 
-                  {result && <div className="result-box">{result}</div>}
-                </div>
-
-                <div className="" style={{display:'flex',flexDirection:'column',gap:24}}>
-                  <div className="feed-card">
-                    <div className="feed-header"><span>Incident Timeline</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></div>
-                    <div className="feed-body">
-                      {incidents.length === 0 ?
-                        <div style={{textAlign:'center',padding:40,color:'var(--muted)',fontSize:14}}>No incidents recorded</div> :
-                        incidents.map(inc => (
-                          <FeedItem
-                            key={inc.id}
-                            status={inc.type === 'incident' ? 'critical' : 'recovery'}
-                            time={new Date(inc.timestamp).toLocaleTimeString()}
-                            service={inc.service}
-                            detail={inc.type === 'incident' ? `Error rate: ${inc.errorRate || '100%'}, ${inc.impactedUsers || 15} users affected` : 'Service recovered'}
-                          />
-                        ))
-                      }
-                      <FeedItem status="info" time="14:03:02" service="CopilotAgent" detail="Root cause identified: Out of Memory on node-4" />
-                    </div>
-                  </div>
-
-                </div>
+                {result && <div className="result-box">{result}</div>}
               </div>
-            )}
 
-            <FooterStats />
-          </div>
+              <div className="" style={{display:'flex',flexDirection:'column',gap:24}}>
+                <div className="feed-card">
+                  <div className="feed-header"><span>Incident Timeline</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></div>
+                  <div className="feed-body">
+                    {incidents.length === 0 ?
+                      <div style={{textAlign:'center',padding:40,color:'var(--muted)',fontSize:14}}>No incidents recorded</div> :
+                      incidents.map(inc => (
+                        <FeedItem
+                          key={inc.id}
+                          status={inc.type === 'incident' ? 'critical' : 'recovery'}
+                          time={new Date(inc.timestamp).toLocaleTimeString()}
+                          service={inc.service}
+                          detail={inc.type === 'incident' ? `Error rate: ${inc.errorRate || '100%'}, ${inc.impactedUsers || 15} users affected` : 'Service recovered'}
+                        />
+                      ))
+                    }
+                    <FeedItem status="info" time="14:03:02" service="CopilotAgent" detail="Root cause identified: Out of Memory on node-4" />
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          <FooterStats />
         </div>
       </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <CopilotKit runtimeUrl={COPILOTKIT_CONFIG.runtimeUrl}>
+      <Dashboard />
     </CopilotKit>
   );
 }
