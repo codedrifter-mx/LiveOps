@@ -40,7 +40,7 @@ function App() {
   const handleAction = (action: string) => setPendingAction(action);
 
   const handleApprove = async () => {
-    const ep = pendingAction === 'restart-keycloak' ? 'restart-keycloak' : pendingAction === 'get-keycloak-status' ? 'railway-status' : pendingAction;
+    const ep = pendingAction === 'redeploy-keycloak' ? 'redeploy-keycloak' : pendingAction === 'recover-keycloak' ? 'recover-memory' : pendingAction === 'get-keycloak-status' ? 'railway-status' : pendingAction;
     try { const r = await fetch(`${BACKEND_URL}/api/${ep}`, { method: 'POST' }); setResult(JSON.stringify(await r.json(), null, 2)); }
     catch (err: any) { setResult(`Error: ${err.message}`); }
     setPendingAction('');
@@ -64,8 +64,8 @@ function App() {
         <ApprovalFlow actionName={pendingAction} description={`Execute ${pendingAction} on Keycloak via Railway API`} onApprove={handleApprove} onReject={handleReject} onDismiss={handleDismiss} />
         <div className="card"><h2>Controls</h2>
           <div className="actions">
-            <button className="btn btn-danger" onClick={async()=>{const r=await fetch(BACKEND_URL+'/api/crash-keycloak',{method:'POST'});setResult(JSON.stringify(await r.json(),null,2))}}>Crash Keycloak</button>
-            <button className="btn btn-success" onClick={async()=>{const r=await fetch(BACKEND_URL+'/api/restore-restart-keycloak',{method:'POST'});setResult(JSON.stringify(await r.json(),null,2))}}>Restore & Restart</button>
+            <button className="btn btn-success" onClick={async()=>{const r=await fetch(BACKEND_URL+'/api/recover-memory',{method:'POST'});setResult(JSON.stringify(await r.json(),null,2))}}>Recover Memory</button>
+            <button className="btn btn-primary" onClick={async()=>{const r=await fetch(BACKEND_URL+'/api/redeploy-keycloak',{method:'POST'});setResult(JSON.stringify(await r.json(),null,2))}}>Redeploy</button>
           </div>
           {result && <div className="result-box">{result}</div>}
         </div>

@@ -30,32 +30,20 @@ async function upsertVar(name: string, value: string): Promise<boolean> {
   catch { return false; }
 }
 
-export async function stopKeycloakDeployment(): Promise<RestartResult> {
-  const id = await getLatestDeploymentId();
-  if (!id) return { success: false, message: 'No deployment found' };
-  await client.request(STOP, { id });
-  return { success: true, message: `Stopped ${id}`, deploymentId: id };
-}
-
-export async function crashKeycloakWithOom(): Promise<RestartResult> {
-  const ok = await upsertVar('JAVA_OPTS', '-Xms1 -Xmx1');
-  return ok ? { success: true, message: 'JAVA_OPTS=-Xms1 -Xmx1. Keycloak will OOM.' } : { success: false, message: 'Failed' };
-}
-
 export async function restoreJavaOpts(): Promise<RestartResult> {
   const ok = await upsertVar('JAVA_OPTS', '-Xms256m -Xmx384m');
   return ok ? { success: true, message: 'JAVA_OPTS restored' } : { success: false, message: 'Failed' };
 }
 
-export async function restartKeycloakService(): Promise<RestartResult> {
+export async function redeployService(): Promise<RestartResult> {
   const r: any = await client.request(REDEPLOY, { serviceId: KC_SVC_ID, environmentId: KC_ENV_ID });
   return { success: true, message: `Redeploy: ${r?.serviceInstanceRedeploy || ''}` };
 }
 
-export async function restoreAndRedeploy(): Promise<RestartResult> {
+export async function recoverAndRedeploy(): Promise<RestartResult> {
   await upsertVar('JAVA_OPTS', '-Xms256m -Xmx384m');
   const r: any = await client.request(REDEPLOY, { serviceId: KC_SVC_ID, environmentId: KC_ENV_ID });
-  return { success: true, message: `Restored + redeployed: ${r?.serviceInstanceRedeploy || ''}` };
+  return { success: true, message: `Recovered + redeployed: ${r?.serviceInstanceRedeploy || ''}` };
 }
 
 export async function getKeycloakStatus(): Promise<{ status: string; url?: string }> {
