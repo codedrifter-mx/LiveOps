@@ -1,6 +1,6 @@
 interface Props { incident: { service: string; status: string; errorRate?: string; impactedUsers?: number; timestamp: string; lastHealthy?: string } | null }
 export function DynamicDashboard({ incident }: Props) {
-  if (!incident) return null;
+  if (!incident) return <div className="gen-card"><div className="gen-label">No active incident</div></div>;
   return <div className="gen-card">
     <div className="gen-label">Incident Dashboard</div>
     <div className="gen-grid">

@@ -29,13 +29,13 @@ function builderIcon(builder: string | null): string {
 
 export function ServicesList({ services, loading, error, onRetry }: Props) {
   if (loading) {
-    return <div className="card"><h2>Services</h2><div style={{color:'var(--muted)',fontSize:14}}>Loading services...</div></div>;
+    return <div className="gen-card"><div className="gen-label">Services <span style={{fontWeight:400}}>Loading...</span></div></div>;
   }
   if (error) {
-    return <div className="card"><h2>Services</h2><div style={{color:'var(--red)',fontSize:14}}>{error} <button className="btn" onClick={onRetry} style={{marginLeft:8,padding:'4px 12px',fontSize:12}}>Retry</button></div></div>;
+    return <div className="gen-card"><div className="gen-label">Services</div><div style={{fontSize:13,color:'var(--red)',marginTop:8}}>{error} <button className="btn" onClick={onRetry} style={{marginLeft:8,padding:'4px 12px',fontSize:12}}>Retry</button></div></div>;
   }
   if (services.length === 0) {
-    return <div className="card"><h2>Services</h2><div style={{color:'var(--muted)',fontSize:14}}>No services found</div></div>;
+    return <div className="gen-card"><div className="gen-label">Services</div><div style={{fontSize:13,color:'var(--muted)',marginTop:8}}>No services found</div></div>;
   }
   return <div className="gen-card">
     <div className="gen-label">Services <span style={{fontWeight:400}}>{services.length} instances</span></div>
