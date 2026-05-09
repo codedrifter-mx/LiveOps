@@ -101,6 +101,11 @@ export async function recoverAndRedeploy(): Promise<RestartResult> {
   return { success: true, message: `Recovered + redeployed: ${r?.deploymentRedeploy || id}` };
 }
 
+export async function crashKeycloakWithOom(): Promise<RestartResult> {
+  const ok = await upsertVar('JAVA_OPTS', '-Xms1 -Xmx1');
+  return ok ? { success: true, message: 'JAVA_OPTS=-Xms1 -Xmx1. Keycloak will OOM on next restart.' } : { success: false, message: 'Failed' };
+}
+
 export async function getKeycloakStatus(): Promise<{ status: string; url?: string }> {
   const id = await getLatestDeploymentId();
   if (!id) return { status: 'no_deployment' };

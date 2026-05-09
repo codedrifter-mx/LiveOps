@@ -102,8 +102,10 @@ Analyze the situation and call show-remediation with your analysis and recommend
         <div className="content">
           {isDown && !acknowledged && <IncidentBanner onAcknowledge={() => setAcknowledged(true)} />}
 
-          {!isDown ? (
-            <EmptyState />
+                      {!isDown ? (
+            <EmptyState onCrash={async () => {
+              try { await fetch(BACKEND_URL + '/api/crash-keycloak', { method: 'POST' }); } catch {}
+            }} />
           ) : (
             <div className="dashboard-grid">
               <div className="" style={{display:'flex',flexDirection:'column',gap:24}}>
