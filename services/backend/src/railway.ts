@@ -110,7 +110,7 @@ export async function getKeycloakStatus(): Promise<{ status: string; url?: strin
 }
 
 export async function getEnvironmentServices(): Promise<ServiceInfo[]> {
-  if (!API_TOKEN || !KC_ENV_ID) return [];
+  if (!API_TOKEN || !KC_ENV_ID) { console.warn('[railway] getEnvironmentServices: missing API_TOKEN or KC_ENV_ID'); return []; }
   try {
     const r: any = await client.request(GET_SERVICES, { environmentId: KC_ENV_ID });
     const edges = r?.environment?.serviceInstances?.edges || [];
