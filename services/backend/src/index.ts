@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { IncidentEvent, ServiceStatus } from './types';
-import { getKeycloakStatus, restoreJavaOpts, redeployService, recoverAndRedeploy, getLatestDeploymentId } from './railway';
+import { getKeycloakStatus, restoreJavaOpts, redeployService, recoverAndRedeploy, getLatestDeploymentId, getEnvironmentServices } from './railway';
 import { SYSTEM_PROMPT } from './agent';
 import { addIncident, getAllIncidents, getIncident } from './lib/incident-store';
 import { CopilotRuntime, GoogleGenerativeAIAdapter, copilotRuntimeNodeExpressEndpoint } from '@copilotkit/runtime';
@@ -47,6 +47,10 @@ app.post('/api/redeploy-keycloak', async (_, res) => { try { res.json(await rede
 app.post('/api/recover-memory', async (_, res) => { try { res.json(await recoverAndRedeploy()); } catch (e: any) { res.status(500).json({ success: false, message: e.message }); } });
 app.post('/api/restore-java-opts', async (_, res) => { try { res.json(await restoreJavaOpts()); } catch (e: any) { res.status(500).json({ success: false, message: e.message }); } });
 app.all('/api/railway-status', async (_, res) => { try { res.json(await getKeycloakStatus()); } catch (e: any) { res.status(500).json({ error: e.message }); } });
+app.get('/api/services', async (_, res) => {
+  try { res.json(await getEnvironmentServices()); }
+  catch (e: any) { res.status(500).json({ error: e.message }); }
+});
 
 // --- Incident Store ---
 app.get('/api/incidents', (_, res) => res.json(getAllIncidents()));
