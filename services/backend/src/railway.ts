@@ -16,12 +16,16 @@ const GET_DEPLOYS = gql`query deployments($input: DeploymentListInput!, $first: 
 const GET_STATUS = gql`query deployment($id: String!) { deployment(id: $id) { id status url } }`;
 const UPSERT_VAR = gql`mutation variableUpsert($input: VariableUpsertInput!) { variableUpsert(input: $input) }`;
 
-async function getLatestDeploymentId(): Promise<string | null> {
+export async function getLatestDeploymentId(): Promise<string | null> {
   if (!API_TOKEN) return null;
   try {
-    const r: any = await client.request(GET_DEPLOYS, { input: { projectId: PROJ_ID, serviceId: KC_SVC_ID, environmentId: KC_ENV_ID }, first: 1 });
+    const r: any = await client.request(GET_DEPLOYS, { input: { projectId: PROJ_ID, serviceId: KC_SVC_ID, environmentId: KC_ENV_ID }, first: 5 });
+    console.log('[railway] deployments query:', JSON.stringify(r));
     return r?.deployments?.edges?.[0]?.node?.id || null;
-  } catch { return null; }
+  } catch (e: any) {
+    console.error('[railway] deployments query failed:', e?.message || e);
+    return null;
+  }
 }
 
 async function upsertVar(name: string, value: string): Promise<boolean> {

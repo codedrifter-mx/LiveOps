@@ -35,6 +35,11 @@ let serviceStatus: ServiceStatus = { service: 'keycloak', status: 'healthy', las
 
 app.get('/api/status', (_, res) => res.json({ status: serviceStatus, currentIncident }));
 app.get('/api/health', (_, res) => res.json({ status: 'UP', timestamp: new Date().toISOString() }));
+app.get('/api/debug', async (_, res) => {
+  const { getLatestDeploymentId } = await import('./railway');
+  try { res.json({ deploymentId: await getLatestDeploymentId() }); }
+  catch (e: any) { res.json({ error: e.message }); }
+});
 
 // --- Demo Controls ---
 app.post('/api/redeploy-keycloak', async (_, res) => { try { res.json(await redeployService()); } catch (e: any) { res.status(500).json({ success: false, message: e.message }); } });
