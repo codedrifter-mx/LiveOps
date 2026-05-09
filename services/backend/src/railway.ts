@@ -28,7 +28,6 @@ export interface ServiceInfo {
   deployUrl: string | null;
   commitMessage: string | null;
   commitAuthor: string | null;
-  instanceStatus: string | null;
   domains: string[];
   isSleeping: boolean;
 }
@@ -130,7 +129,6 @@ export async function getEnvironmentServices(): Promise<ServiceInfo[]> {
         deployUrl: dep.url || null,
         commitMessage: meta.commitMessage || null,
         commitAuthor: meta.commitAuthor || null,
-        instanceStatus: null,
         domains: (node.domains || []).map((d: any) => d.domain),
         isSleeping: !!node.sleepApplication,
       };

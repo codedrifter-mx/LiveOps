@@ -9,7 +9,8 @@ interface Props {
 
 function statusDot(status: string | null, isSleeping: boolean): string {
   if (isSleeping) return 'disconnected';
-  if (status === 'SUCCESS' || status === 'RUNNING' || !status) return 'healthy';
+  if (!status) return 'disconnected';
+  if (status === 'SUCCESS' || status === 'RUNNING') return 'healthy';
   return 'down';
 }
 

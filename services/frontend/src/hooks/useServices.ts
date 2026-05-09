@@ -12,7 +12,6 @@ export interface ServiceInfo {
   deployUrl: string | null;
   commitMessage: string | null;
   commitAuthor: string | null;
-  instanceStatus: string | null;
   domains: string[];
   isSleeping: boolean;
 }
