@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { IncidentEvent, ServiceStatus } from './types';
-import { getKeycloakStatus, restoreJavaOpts, redeployService, recoverAndRedeploy } from './railway';
+import { getKeycloakStatus, restoreJavaOpts, redeployService, recoverAndRedeploy, getLatestDeploymentId } from './railway';
 import { SYSTEM_PROMPT } from './agent';
 import { addIncident, getAllIncidents, getIncident } from './lib/incident-store';
 import { CopilotRuntime, GoogleGenerativeAIAdapter, copilotRuntimeNodeExpressEndpoint } from '@copilotkit/runtime';
@@ -36,7 +36,6 @@ let serviceStatus: ServiceStatus = { service: 'keycloak', status: 'healthy', las
 app.get('/api/status', (_, res) => res.json({ status: serviceStatus, currentIncident }));
 app.get('/api/health', (_, res) => res.json({ status: 'UP', timestamp: new Date().toISOString() }));
 app.get('/api/debug', async (_, res) => {
-  const { getLatestDeploymentId } = await import('./railway');
   try { res.json({ deploymentId: await getLatestDeploymentId() }); }
   catch (e: any) { res.json({ error: e.message }); }
 });
