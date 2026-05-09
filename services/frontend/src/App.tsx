@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { CopilotKit, useCopilotAction, CopilotTask, useCopilotContext } from '@copilotkit/react-core';
+import { CopilotKit, useAgent, useFrontendTool } from '@copilotkit/react-core/v2';
+import { z } from 'zod';
 import { useSSE, IncidentEvent } from './hooks/useSSE';
 import { COPILOTKIT_CONFIG } from './lib/copilotkit';
 import { Sidebar } from './components/Sidebar';
@@ -14,6 +15,15 @@ import './App.css';
 
 const BACKEND_URL = (window as any).__BACKEND_URL__ || '';
 
+const remediationParams = z.object({
+  analysis: z.string().describe('AI analysis'),
+  buttons: z.array(z.object({
+    label: z.string(),
+    action: z.enum(['redeploy-keycloak', 'recover-keycloak', 'get-keycloak-status']),
+    variant: z.enum(['lilac', 'mint', 'blue', 'outline']),
+  })).describe('Action buttons'),
+});
+
 function Dashboard() {
   const { lastEvent, connected } = useSSE();
   const [incidents, setIncidents] = useState<IncidentEvent[]>([]);
@@ -23,7 +33,7 @@ function Dashboard() {
   const [result, setResult] = useState<string | null>(null);
 
   const [acknowledged, setAcknowledged] = useState(false);
-  const context = useCopilotContext();
+  const { agent } = useAgent({ agentId: 'default' });
   const [remediationData, setRemediationData] = useState<{ analysis: string; buttons: any[] } | null>(null);
   const [agentLoading, setAgentLoading] = useState(false);
   const [agentError, setAgentError] = useState<string | null>(null);
@@ -48,38 +58,31 @@ function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (!isDown || !currentIncident) return;
+    if (!isDown || !currentIncident || !agent) return;
     setAgentLoading(true);
     setAgentError(null);
     setRemediationData(null);
-    const task = new CopilotTask({
-      instructions: `[INCIDENT ALERT] Keycloak is DOWN.
+    const instructions = `[INCIDENT ALERT] Keycloak is DOWN.
 Error rate: ${currentIncident.errorRate || 'N/A'}
 Impacted users: ${currentIncident.impactedUsers || 'N/A'}
 Last healthy: ${currentIncident.lastHealthy || 'N/A'}
 
-Analyze the situation and call show-remediation with your analysis and recommended action buttons.`
-    });
-    task.run(context).catch((err: any) => {
-      setAgentError(err.message || 'Agent analysis failed');
+Analyze the situation and call show-remediation with your analysis and recommended action buttons.`;
+    agent.setMessages([{ id: crypto.randomUUID(), role: 'system', content: instructions }]);
+    agent.runAgent({ forwardedProps: { toolChoice: 'required' } }).catch((err: any) => {
+      setAgentError(err?.message || 'Agent analysis failed');
       setAgentLoading(false);
     });
   }, [isDown]);
 
-  useCopilotAction({
+  useFrontendTool({
     name: 'show-remediation',
-    handler: (args) => {
+    description: 'Show remediation analysis and action buttons',
+    parameters: remediationParams,
+    handler: async (args: z.infer<typeof remediationParams>) => {
       setRemediationData({ analysis: args.analysis, buttons: args.buttons });
       setAgentLoading(false);
     },
-    parameters: [
-      { name: 'analysis', type: 'string', description: 'AI analysis', required: true },
-      { name: 'buttons', type: 'object[]', description: 'Action buttons', required: true, attributes: [
-        { name: 'label', type: 'string' },
-        { name: 'action', type: 'string', enum: ['redeploy-keycloak', 'recover-keycloak', 'get-keycloak-status'] },
-        { name: 'variant', type: 'string', enum: ['lilac', 'mint', 'blue', 'outline'] },
-      ]},
-    ],
   });
 
   const handleApprove = async () => {
