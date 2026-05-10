@@ -90,6 +90,7 @@ if (process.env.GOOGLE_API_KEY) {
     });
     const copilotRouter = createCopilotEndpointExpress({
       basePath: '/api/copilotkit',
+      mode: 'single-route',
       cors: false,
       runtime: new CopilotRuntime({
         agents: { default: agent },
