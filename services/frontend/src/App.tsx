@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CopilotKit, useAgent, useFrontendTool } from '@copilotkit/react-core/v2';
+import { CopilotKit, useAgent, useCopilotKit, useFrontendTool } from '@copilotkit/react-core/v2';
 import { z } from 'zod';
 import { useSSE, IncidentEvent } from './hooks/useSSE';
 import { COPILOTKIT_CONFIG } from './lib/copilotkit';
@@ -34,6 +34,7 @@ function Dashboard() {
 
   const [acknowledged, setAcknowledged] = useState(false);
   const { agent } = useAgent({ agentId: 'default' });
+  const { copilotkit } = useCopilotKit();
   const [remediationData, setRemediationData] = useState<{ analysis: string; buttons: any[] } | null>(null);
   const [agentLoading, setAgentLoading] = useState(false);
   const [agentError, setAgentError] = useState<string | null>(null);
@@ -69,7 +70,7 @@ Last healthy: ${currentIncident.lastHealthy || 'N/A'}
 
 Analyze the situation and call show-remediation with your analysis and recommended action buttons.`;
     agent.setMessages([{ id: crypto.randomUUID(), role: 'system', content: instructions }]);
-    agent.runAgent({ forwardedProps: { toolChoice: 'required' } }).catch((err: any) => {
+    copilotkit.runAgent({ agent, forwardedProps: { toolChoice: 'required' } }).catch((err: any) => {
       setAgentError(err?.message || 'Agent analysis failed');
       setAgentLoading(false);
     });
