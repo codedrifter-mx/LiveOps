@@ -58,6 +58,16 @@ function Dashboard() {
     }).catch(() => {});
   }, []);
 
+  useFrontendTool({
+    name: 'show-remediation',
+    description: 'Show remediation analysis and action buttons',
+    parameters: remediationParams,
+    handler: async (args: z.infer<typeof remediationParams>) => {
+      setRemediationData({ analysis: args.analysis, buttons: args.buttons });
+      setAgentLoading(false);
+    },
+  });
+
   useEffect(() => {
     if (!isDown || !currentIncident || !agent) return;
     setAgentLoading(true);
@@ -75,16 +85,6 @@ Analyze the situation and call show-remediation with your analysis and recommend
       setAgentLoading(false);
     });
   }, [isDown]);
-
-  useFrontendTool({
-    name: 'show-remediation',
-    description: 'Show remediation analysis and action buttons',
-    parameters: remediationParams,
-    handler: async (args: z.infer<typeof remediationParams>) => {
-      setRemediationData({ analysis: args.analysis, buttons: args.buttons });
-      setAgentLoading(false);
-    },
-  });
 
   const handleApprove = async () => {
     const ep = pendingAction === 'redeploy-keycloak' ? 'redeploy-keycloak' : pendingAction === 'recover-keycloak' ? 'recover-memory' : pendingAction === 'get-keycloak-status' ? 'railway-status' : pendingAction;
