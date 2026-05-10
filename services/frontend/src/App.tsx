@@ -79,7 +79,7 @@ Impacted users: ${currentIncident.impactedUsers || 'N/A'}
 Last healthy: ${currentIncident.lastHealthy || 'N/A'}
 
 Analyze the situation and call show-remediation with your analysis and recommended action buttons.`;
-    agent.setMessages([{ id: crypto.randomUUID(), role: 'system', content: instructions }]);
+    agent.setMessages([{ id: crypto.randomUUID(), role: 'user', content: instructions }]);
     copilotkit.runAgent({ agent, forwardedProps: { toolChoice: 'required' } }).catch((err: any) => {
       setAgentError(err?.message || 'Agent analysis failed');
       setAgentLoading(false);
