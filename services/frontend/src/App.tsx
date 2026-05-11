@@ -12,6 +12,7 @@ import { FeedItem } from './components/FeedItem';
 import { FooterStats } from './components/FooterStats';
 import { RemediationCard } from './components/RemediationCard';
 import { REMEDIATION_AGENT_RUN_OPTIONS } from './lib/remediation-agent';
+import { ActionStatus, getActionStatusFromResponse, getRecoverySuccessStatus } from './lib/recovery-status';
 import './App.css';
 
 const BACKEND_URL = (window as any).__BACKEND_URL__ || '';
@@ -31,7 +32,7 @@ function Dashboard() {
   const [isDown, setIsDown] = useState(false);
   const [currentIncident, setCurrentIncident] = useState<IncidentEvent | null>(null);
   const [pendingAction, setPendingAction] = useState('');
-  const [result, setResult] = useState<string | null>(null);
+  const [actionStatus, setActionStatus] = useState<ActionStatus | null>(null);
 
   const [acknowledged, setAcknowledged] = useState(false);
   const { agent } = useAgent({ agentId: 'default' });
@@ -46,6 +47,7 @@ function Dashboard() {
       setIsDown(lastEvent.type === 'incident');
       setCurrentIncident(lastEvent);
       setAcknowledged(false);
+      if (lastEvent.type === 'recovery') setActionStatus(getRecoverySuccessStatus());
     }
   }, [lastEvent]);
 
@@ -89,9 +91,13 @@ Analyze the situation and call show-remediation with your analysis and recommend
   }, [isDown, currentIncident, agent, copilotkit]);
 
   const handleApprove = async () => {
+    const action = pendingAction;
     const ep = pendingAction === 'redeploy-keycloak' ? 'redeploy-keycloak' : pendingAction === 'recover-keycloak' ? 'recover-memory' : pendingAction === 'get-keycloak-status' ? 'railway-status' : pendingAction;
-    try { const r = await fetch(`${BACKEND_URL}/api/${ep}`, { method: 'POST' }); setResult(JSON.stringify(await r.json(), null, 2)); }
-    catch (err: any) { setResult(`Error: ${err.message}`); }
+    try {
+      const r = await fetch(`${BACKEND_URL}/api/${ep}`, { method: 'POST' });
+      setActionStatus(getActionStatusFromResponse(action, await r.json()));
+    }
+    catch (err: any) { setActionStatus({ kind: 'error', title: 'Action failed', message: err.message }); }
     setPendingAction('');
   };
 
@@ -118,7 +124,7 @@ Analyze the situation and call show-remediation with your analysis and recommend
                 <RemediationCard
                   analysis={remediationData?.analysis || ''}
                   buttons={remediationData?.buttons || []}
-                  onAction={(action) => setPendingAction(action)}
+                  onAction={(action) => { setActionStatus(null); setPendingAction(action); }}
                   loading={agentLoading}
                   error={agentError}
                 />
@@ -130,7 +136,13 @@ Analyze the situation and call show-remediation with your analysis and recommend
                   onReject={handleReject}
                 />
 
-                {result && <div className="result-box">{result}</div>}
+                {actionStatus && <div className={`action-status ${actionStatus.kind}`}>
+                  {actionStatus.kind === 'waiting' && <div className="spinner" />}
+                  <div>
+                    <div className="action-status-title">{actionStatus.title}</div>
+                    <div className="action-status-message">{actionStatus.message}</div>
+                  </div>
+                </div>}
               </div>
 
               <div className="" style={{display:'flex',flexDirection:'column',gap:24}}>

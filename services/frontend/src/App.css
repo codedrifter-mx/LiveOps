@@ -136,6 +136,12 @@ body {
 .btn-danger { background: var(--red); color: white; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
 .result-box { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-top: 12px; font-size: 13px; font-family: 'Spline Sans Mono', monospace; white-space: pre-wrap; word-break: break-all; }
+.action-status { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.action-status.waiting { border-color: var(--blue); }
+.action-status.success { border-color: var(--mint); }
+.action-status.error { border-color: var(--red); }
+.action-status-title { font-weight: 700; font-size: 14px; }
+.action-status-message { color: var(--muted); font-size: 13px; margin-top: 2px; }
 
 .service-list { display: flex; flex-direction: column; gap: 8px; }
 .service-item { padding: 12px; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--border); border-left: 4px solid var(--mint); }
@@ -156,3 +162,5 @@ body {
 
 @keyframes slideIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 .animate-in { animation: slideIn .3s ease-out; }
+.see-more-btn { display: block; margin-top: 10px; background: none; border: none; color: var(--blue); font-size: 12px; font-weight: 500; cursor: pointer; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
+.see-more-btn:hover { opacity: 0.75; }
