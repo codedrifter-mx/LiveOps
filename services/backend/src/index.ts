@@ -3,6 +3,7 @@ import cors from 'cors';
 import { IncidentEvent, ServiceStatus } from './types';
 import { getKeycloakStatus, restoreJavaOpts, redeployService, recoverAndRedeploy, getLatestDeploymentId, getEnvironmentServices, crashKeycloakWithOom } from './railway';
 import { SYSTEM_PROMPT } from './agent';
+import { A2UI_RUNTIME_CONFIG, AGENT_MODEL, AGENT_OVERRIDABLE_PROPERTIES } from './agent/config';
 import { addIncident, getAllIncidents, getIncident } from './lib/incident-store';
 import { z } from 'zod';
 import { CopilotRuntime, BuiltInAgent, createCopilotEndpointExpress, defineTool } from '@copilotkit/runtime/v2';
@@ -63,9 +64,10 @@ if (process.env.GOOGLE_API_KEY) {
   console.log('[liveops] GOOGLE_API_KEY detected, registering CopilotKit endpoint...');
   try {
     const agent = new BuiltInAgent({
-      model: 'google/gemini-2.0-flash',
+      model: AGENT_MODEL,
       apiKey: process.env.GOOGLE_API_KEY,
       prompt: SYSTEM_PROMPT,
+      overridableProperties: [...AGENT_OVERRIDABLE_PROPERTIES],
       tools: [
         defineTool({
           name: 'redeploy-keycloak',
@@ -94,6 +96,7 @@ if (process.env.GOOGLE_API_KEY) {
       cors: false,
       runtime: new CopilotRuntime({
         agents: { default: agent },
+        a2ui: A2UI_RUNTIME_CONFIG,
       }),
     });
     app.use(copilotRouter);
